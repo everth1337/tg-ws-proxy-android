@@ -1,0 +1,14 @@
+# Local builds and machine settings
+.gradle/
+**/build/
+local.properties
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+*.apk
+*.aab
+*.jks
+*.keystore
+.idea/
+.DS_Store
