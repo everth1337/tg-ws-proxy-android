@@ -15,8 +15,8 @@ import android.widget.*;
 
 public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private TextView status, traffic, endpoint;
-    private Button toggle, telegram;
+    private TextView status, traffic, endpoint, network;
+    private Button toggle, telegram, reconnect;
     private final int ink = Color.rgb(231,240,248), mint = Color.rgb(105,224,186);
     private final Runnable refresh = new Runnable() { public void run() { render(); handler.postDelayed(this, 500); } };
     private int dp(int n) { return (int)(getResources().getDisplayMetrics().density * n); }
@@ -36,6 +36,7 @@ public class MainActivity extends Activity {
         status = addText(card,"Остановлен",22,mint,true); status.setContentDescription("Статус прокси");
         endpoint = addText(card,"",15,ink,false);
         traffic = addText(card,"",13,Color.rgb(156,176,194),false);
+        network = addText(card,"",13,Color.rgb(156,176,194),false);
         toggle = button(page,"Запустить прокси", v -> {
             if (ProxyService.busy) { stopService(new Intent(this,ProxyService.class)); return; }
             if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},1);
@@ -46,6 +47,7 @@ public class MainActivity extends Activity {
             try { startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(ProxySettings.link(this)))); }
             catch (ActivityNotFoundException e) { new AlertDialog.Builder(this).setMessage("Установите Telegram или скопируйте ссылку и откройте её в своём клиенте.").setPositiveButton("Понятно",null).show(); }
         });
+        reconnect = button(page,"Переподключить", v -> startService(new Intent(this,ProxyService.class).setAction("reconnect")));
         button(page,"Скопировать ссылку",v -> {
             ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Telegram proxy",ProxySettings.link(this)));
             Toast.makeText(this,"Ссылка скопирована",Toast.LENGTH_SHORT).show();
@@ -59,7 +61,7 @@ public class MainActivity extends Activity {
         addText(page,"1. Запустите прокси\n2. Нажмите «Подключить Telegram»\n3. Подтвердите прокси в Telegram",15,ink,false).setPadding(0,dp(24),0,dp(12));
         addText(page,"Прокси работает на этом телефоне по адресу 127.0.0.1. Пока он нужен Telegram, оставляйте службу включённой. После остановки отключите прокси в Telegram.",13,Color.rgb(156,176,194),false);
         button(page,"Фоновая работа",v -> startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))));
-        addText(page,"Неофициальный Android-порт · 1.11.4\nFlowseal/tg-ws-proxy · MIT",12,Color.rgb(156,176,194),false);
+        addText(page,"Неофициальный Android-порт · 1.11.4-android.2\nFlowseal/tg-ws-proxy · MIT",12,Color.rgb(156,176,194),false);
         render();
     }
     private TextView addText(LinearLayout parent,String text,int size,int color,boolean bold) {
@@ -72,6 +74,7 @@ public class MainActivity extends Activity {
     }
     private void render() {
         status.setText(ProxyService.state); traffic.setText(ProxyService.traffic); endpoint.setText("127.0.0.1 : " + ProxySettings.port(this));
+        network.setText(ProxyService.networkStatus); reconnect.setEnabled(ProxyService.busy && ProxyService.running);
         toggle.setText(ProxyService.busy ? "Остановить прокси" : "Запустить прокси");
         toggle.setEnabled(!ProxyService.state.equals("Останавливается…")); telegram.setEnabled(ProxyService.running);
     }

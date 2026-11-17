@@ -4,6 +4,7 @@ import logging
 import sys
 import threading
 import android_aes
+from android_runtime import supervise
 
 sys.modules['proxy._aes'] = android_aes
 
@@ -72,30 +73,22 @@ async def _run(callback):
         _stop_event = asyncio.Event()
         if _stop_requested:
             _stop_event.set()
-    task = asyncio.create_task(core._run(_stop_event))
-    notified = False
     try:
-        while not task.done():
-            if _stop_event.is_set():
-                try:
-                    await asyncio.wait_for(asyncio.shield(task), 5)
-                except asyncio.TimeoutError:
-                    task.cancel()
-                break
+        def ready():
             server = core._server_instance
-            if server is not None and server.is_serving() and not notified:
-                callback.onProxyReady()
-                notified = True
-            callback.onStats(stats.connections_active, human_bytes(stats.bytes_up), human_bytes(stats.bytes_down))
-            await asyncio.sleep(.5)
-        try:
-            await task
-        except asyncio.CancelledError:
-            pass
+            return server is not None and server.is_serving()
+
+        def reconnecting():
+            logging.getLogger('tg-mtproto-proxy').info(
+                'Android network changed: closing old sessions and resetting retry backoff')
+            callback.onReconnecting()
+
+        await supervise(
+            core._run, _stop_event, callback.getNetworkRevision, ready,
+            callback.onProxyReady, reconnecting,
+            lambda: callback.onStats(stats.connections_active,
+                                     human_bytes(stats.bytes_up), human_bytes(stats.bytes_down)))
     finally:
-        if not task.done():
-            task.cancel()
-            await asyncio.gather(task, return_exceptions=True)
         with _lock:
             _loop = _stop_event = None
 
