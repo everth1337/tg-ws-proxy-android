@@ -12,3 +12,7 @@ __pycache__/
 *.keystore
 .idea/
 .DS_Store
+.wrangler/
+node_modules/
+.dev.vars*
+.env*

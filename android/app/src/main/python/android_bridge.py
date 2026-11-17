@@ -41,7 +41,7 @@ def stop():
             except RuntimeError:
                 pass
 
-def run(secret, port, domains, callback):
+def run(secret, port, domains, worker, worker_token, callback):
     global _stop_requested
     # Java serializes starts. A stop arriving during Python initialization is
     # supplied by the callback before the loop starts.
@@ -53,8 +53,10 @@ def run(secret, port, domains, callback):
     proxy_config.port = int(port)
     proxy_config.secret = secret
     proxy_config.pool_size = 4
-    proxy_config.dc_redirects = {2: '149.154.167.220', 4: '149.154.167.220'}
+    proxy_config.dc_redirects = {} if worker.strip() else {2: '149.154.167.220', 4: '149.154.167.220'}
     proxy_config.cfproxy_user_domains = domains.split() if domains.strip() else []
+    proxy_config.cfproxy_worker_domains = [worker.strip()] if worker.strip() else []
+    proxy_config.cfproxy_worker_token = worker_token.strip() if worker.strip() else ''
     handler = _LogHandler(callback)
     root = logging.getLogger()
     root.setLevel(logging.INFO)

@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 
 from .raw_websocket import RawWebSocket, WsHandshakeError
 from .stats import stats
-from .config import proxy_config
+from .config import proxy_config, worker_connect_options
 from .utils import ws_domains, DC_DEFAULT_IPS, WS_PATH, WS_PATH_TEST
 
 log = logging.getLogger('tg-mtproto-proxy')
@@ -380,7 +380,7 @@ class _CfWorkerPool:
             try:
                 ws = await RawWebSocket.connect(
                     worker_domain, worker_domain, timeout=8, path=path,
-                    secure=not proxy_config.disable_secure)
+                    secure=not proxy_config.disable_secure, **worker_connect_options())
                 return ws, worker_domain
             except Exception as exc:
                 log.debug("CF worker pool connect DC%d via %s for %s failed: %r",

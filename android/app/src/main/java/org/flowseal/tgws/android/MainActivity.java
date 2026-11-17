@@ -61,7 +61,7 @@ public class MainActivity extends Activity {
         addText(page,"1. Запустите прокси\n2. Нажмите «Подключить Telegram»\n3. Подтвердите прокси в Telegram",15,ink,false).setPadding(0,dp(24),0,dp(12));
         addText(page,"Прокси работает на этом телефоне по адресу 127.0.0.1. Пока он нужен Telegram, оставляйте службу включённой. После остановки отключите прокси в Telegram.",13,Color.rgb(156,176,194),false);
         button(page,"Фоновая работа",v -> startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:"+getPackageName()))));
-        addText(page,"Неофициальный Android-порт · 1.11.4-android.2\nFlowseal/tg-ws-proxy · MIT",12,Color.rgb(156,176,194),false);
+        addText(page,"Неофициальный Android-порт · 1.11.4-android.3\nFlowseal/tg-ws-proxy · MIT",12,Color.rgb(156,176,194),false);
         render();
     }
     private TextView addText(LinearLayout parent,String text,int size,int color,boolean bold) {
@@ -83,15 +83,36 @@ public class MainActivity extends Activity {
         LinearLayout box=new LinearLayout(this);box.setOrientation(LinearLayout.VERTICAL);box.setPadding(dp(20),dp(8),dp(20),dp(8));
         addText(box,"Порт (1024–65535)",14,ink,false);
         EditText port = new EditText(this);port.setInputType(2);port.setText(String.valueOf(ProxySettings.port(this)));box.addView(port);
+        addText(box,"Личный Cloudflare Worker (без https://)",14,ink,false);
+        EditText worker=new EditText(this);worker.setSingleLine(true);worker.setHint("bridge.username.workers.dev");worker.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);worker.setText(ProxySettings.prefs(this).getString("worker",""));box.addView(worker);
+        addText(box,"Ключ Worker — тот же, что AUTH_TOKEN в Cloudflare",14,ink,false);
+        EditText workerToken=new EditText(this);workerToken.setSingleLine(true);workerToken.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);workerToken.setText(ProxySettings.prefs(this).getString("worker_token",""));box.addView(workerToken);
+        button(box,"Создать ключ Worker",v -> {
+            String key=ProxySettings.newWorkerToken();
+            ProxySettings.prefs(this).edit().putString("worker_token",key).apply();
+            workerToken.setText(key);
+        });
+        button(box,"Скопировать ключ Worker",v -> {
+            String key=workerToken.getText().toString().trim();
+            if(key.isEmpty()){workerToken.setError("Сначала создайте ключ");return;}
+            ((android.content.ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("Worker AUTH_TOKEN",key));
+            Toast.makeText(this,"Ключ скопирован. Добавьте его как AUTH_TOKEN в Cloudflare",Toast.LENGTH_LONG).show();
+        });
+        addText(box,"Если Worker задан, он используется для всех DC. Очистите его адрес, чтобы вернуть стандартные маршруты.",13,Color.rgb(156,176,194),false);
         addText(box,"Свой CF-домен (необязательно, без https://)",14,ink,false);
         EditText domain=new EditText(this);domain.setSingleLine(true);domain.setInputType(android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_URI);domain.setText(ProxySettings.prefs(this).getString("domains",""));box.addView(domain);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Настройки").setView(box).setNegativeButton("Отмена",null).setPositiveButton("Сохранить",null).create();
+        ScrollView settingsScroll=new ScrollView(this);settingsScroll.addView(box);
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle("Настройки").setView(settingsScroll).setNegativeButton("Отмена",null).setPositiveButton("Сохранить",null).create();
         dialog.setOnShowListener(d -> dialog.getButton(-1).setOnClickListener(v -> {
             try {
                 int n=Integer.parseInt(port.getText().toString().trim());if(n<1024||n>65535)throw new IllegalArgumentException();
                 String host=domain.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
                 if(!host.isEmpty() && (!host.matches("[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\\.[a-z]{2,63}")||host.contains(".."))) {domain.setError("Введите домен без пути и протокола");return;}
-                ProxySettings.prefs(this).edit().putInt("port",n).putString("domains",host).apply();dialog.dismiss();render();
+                String workerHost=worker.getText().toString().trim().toLowerCase(java.util.Locale.ROOT);
+                String key=workerToken.getText().toString().trim();
+                if(!workerHost.isEmpty() && (!workerHost.matches("[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?\\.[a-z]{2,63}")||workerHost.contains(".."))) {worker.setError("Введите домен Worker без пути и протокола");return;}
+                if(!workerHost.isEmpty() && !key.matches("[A-Za-z0-9_-]{16,128}")){workerToken.setError("Создайте ключ или вставьте AUTH_TOKEN из Cloudflare");return;}
+                ProxySettings.prefs(this).edit().putInt("port",n).putString("domains",host).putString("worker",workerHost).putString("worker_token",key).apply();dialog.dismiss();render();
             }catch(IllegalArgumentException e){port.setError("Порт от 1024 до 65535");}
         }));dialog.show();
     }

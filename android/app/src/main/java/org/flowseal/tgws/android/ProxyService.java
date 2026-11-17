@@ -53,10 +53,12 @@ public class ProxyService extends Service {
         String secret = ProxySettings.secret(this);
         int port = ProxySettings.port(this);
         String domains = ProxySettings.prefs(this).getString("domains", "");
+        String workerDomain = ProxySettings.prefs(this).getString("worker", "");
+        String workerToken = ProxySettings.prefs(this).getString("worker_token", "");
         worker.execute(() -> {
             try {
                 if (!Python.isStarted()) Python.start(new AndroidPlatform(getApplicationContext()));
-                Python.getInstance().getModule("android_bridge").callAttr("run", secret, port, domains, this);
+                Python.getInstance().getModule("android_bridge").callAttr("run", secret, port, domains, workerDomain, workerToken, this);
             } catch (Exception e) {
                 if (!stopping) { state = "Ошибка запуска — смотрите журнал"; onLog(e.toString()); }
             } finally {

@@ -1,0 +1,7 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "tg-ws-bridge",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-01"
+  // Add AUTH_TOKEN as a secret in the dashboard or with wrangler secret put.
+}

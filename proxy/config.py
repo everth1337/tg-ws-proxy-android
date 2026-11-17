@@ -70,6 +70,7 @@ class ProxyConfig:
     fallback_cfproxy: bool = True
     cfproxy_user_domains: List[str] = field(default_factory=list)
     cfproxy_worker_domains: List[str] = field(default_factory=list)
+    cfproxy_worker_token: str = ''
     cfproxy_h2_media: bool = True
     disable_secure: bool = False
     fake_tls_domain: str = ''
@@ -83,6 +84,11 @@ class ProxyConfig:
 
 
 proxy_config = ProxyConfig()
+
+
+def worker_connect_options():
+    """Keep authentication out of URLs and preserve unauthenticated upstreams."""
+    return {'bearer_token': proxy_config.cfproxy_worker_token} if proxy_config.cfproxy_worker_token else {}
 
 
 def coerce_domain_list(value) -> List[str]:

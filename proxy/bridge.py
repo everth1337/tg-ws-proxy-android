@@ -9,7 +9,7 @@ from urllib.parse import urlencode
 from .utils import *
 from .stats import stats
 from .balancer import balancer
-from .config import proxy_config
+from .config import proxy_config, worker_connect_options
 from .raw_websocket import RawWebSocket
 from .pool import cf_worker_pool
 from .network_debug import WsActivity
@@ -214,7 +214,8 @@ async def _cfproxy_worker_fallback(reader, writer, relay_init, label,
             try:
                 ws = await RawWebSocket.connect(worker_domain, worker_domain,
                                                 timeout=10.0, path=path, 
-                                                secure=not proxy_config.disable_secure)
+                                                secure=not proxy_config.disable_secure,
+                                                **worker_connect_options())
                 break
             except Exception as exc:
                 cf_worker_pool.report_failure(worker_domain, exc)

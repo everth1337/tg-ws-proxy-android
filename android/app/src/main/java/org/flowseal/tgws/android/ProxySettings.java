@@ -17,5 +17,9 @@ final class ProxySettings {
         return value;
     }
     static int port(Context c) { return prefs(c).getInt("port", 1443); }
+    static String newWorkerToken() {
+        byte[] bytes = new byte[24]; new SecureRandom().nextBytes(bytes);
+        return android.util.Base64.encodeToString(bytes, android.util.Base64.URL_SAFE | android.util.Base64.NO_WRAP | android.util.Base64.NO_PADDING);
+    }
     static String link(Context c) { return "tg://proxy?server=127.0.0.1&port=" + port(c) + "&secret=dd" + secret(c); }
 }

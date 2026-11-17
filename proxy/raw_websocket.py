@@ -3,6 +3,7 @@ import logging
 import base64
 import struct
 import asyncio
+import re
 import socket as _socket
 
 from typing import List, Optional, Tuple
@@ -92,7 +93,13 @@ class RawWebSocket:
     @staticmethod
     async def connect(host: str, domain: str, timeout: float = 10.0,
                       path: str = '/apiws', *,
-                      sni: Optional[str] = None, secure = True) -> 'RawWebSocket':
+                      sni: Optional[str] = None, secure = True,
+                      bearer_token: Optional[str] = None) -> 'RawWebSocket':
+        if bearer_token is not None and not re.fullmatch(r'[A-Za-z0-9_-]{16,128}', bearer_token):
+            raise ValueError('Worker key must be 16-128 URL-safe characters')
+        if bearer_token and not secure:
+            raise ValueError('Authenticated Worker connections require HTTPS')
+        authorization = f'Authorization: Bearer {bearer_token}\r\n' if bearer_token else ''
         ssl_context = _ssl_ctx_fronting if sni else _ssl_ctx
 
         if sni is None:
@@ -124,6 +131,7 @@ class RawWebSocket:
                 f'Sec-WebSocket-Key: {ws_key}\r\n'
                 f'Sec-WebSocket-Version: 13\r\n'
                 f'Sec-WebSocket-Protocol: binary\r\n'
+                f'{authorization}'
                 f'\r\n'
             )
 
